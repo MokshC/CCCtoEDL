@@ -13,16 +13,20 @@ def read_ccc_file(ccc_path):
     root = tree.getroot()
     
     # Extracting SOP values
-    sop_node = root.find('.//SOPNode')
-    slope = sop_node.find('Slope').text.split()
-    offset = sop_node.find('Offset').text.split()
-    power = sop_node.find('Power').text.split()
-    
-    # Extracting Saturation value
-    sat_node = root.find('.//SatNode')
-    saturation = sat_node.find('Saturation').text.strip()
-    
-    return slope, offset, power, saturation
+    try:
+        sop_node = root.find('.//SOPNode')
+        slope = sop_node.find('Slope').text.split()
+        offset = sop_node.find('Offset').text.split()
+        power = sop_node.find('Power').text.split()
+        
+        # Extracting Saturation value
+        sat_node = root.find('.//SatNode')
+        saturation = sat_node.find('Saturation').text.strip()
+        
+        return slope, offset, power, saturation
+    except:
+        print("Error on", ccc_path)
+        return None
 
 def read_edl_file(edl_path):
     # Read the initial EDL file and return its contents
@@ -101,7 +105,6 @@ def write_output_edl(output_path, edl_content, ccc_dict):
 def process_edl(edl, cccDict):
     # Example function to process the EDL file and CCC files
     print(f"Processing EDL: {edl}")
-    print(f"Using CCC Directory: {cccDir}")
     
     output_file = f"{os.path.splitext(edl)[0]}_cdl.edl"
     
@@ -117,8 +120,8 @@ def main():
     args = parser.parse_args()
     
     # Expand glob patterns for cccdir and search for cccs
-    print("Searching for CCCs in", str(glob.glob(args.cccdir)))
-    ccc_files = find_ccc_files(glob.glob(args.cccdir))
+    print("Searching for CCCs in", str(args.cccdir))
+    ccc_files = find_ccc_files(args.cccdir)
     
     if len(ccc_files) < 1:
         print("No CCC files found in the specified directory.")
