@@ -20,12 +20,17 @@ def read_ccc_file(ccc_path):
     root = tree.getroot()
     
     # Extracting SOP values
-    slope = root[0][0][0].text.split()
-    offset = root[0][0][1].text.split()
-    power = root[0][0][2].text.split()
-    
-    # Extracting Saturation value
-    saturation = root[0][1][0].text.strip()
+    try:
+        slope = root[0][0][0].text.split()
+        offset = root[0][0][1].text.split()
+        power = root[0][0][2].text.split()
+        saturation = root[0][1][0].text.strip()
+    except:
+        print("Error on:", ccc_path)
+        slope = "1.000000 1.000000 1.000000".split()
+        offset = "0.000000 0.000000 0.000000".split()
+        power = "1.000000 1.000000 1.000000".split()
+        saturation = "1.000000".strip() 
     
     return slope, offset, power, saturation
 
