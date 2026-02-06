@@ -1,7 +1,9 @@
-# Moksh Chitkara
 # CCC to EDL command line tool
 # v1.0.0
 # Last updated Feb 5th 2026
+# Copyright (C) 2026  Moksh Chitkara
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import argparse
 import os
