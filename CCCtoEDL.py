@@ -18,13 +18,24 @@ def read_ccc_file(ccc_path):
     # Read the Color Correction Collection (CCC) file and extract the values needed
     tree = ET.parse(ccc_path)
     root = tree.getroot()
-    
-    # Extracting SOP values
-    try:
+
+	# Extracting SOP values
+	try:
+	    # Define a function to handle namespaces
+	    ns = {'cdl': root.tag.split('{')[1].split('}')[0]}  # Extract namespace
+	
+	    # Find the necessary nodes
+	    slope = root.find('.//cdl:SOPNode/cdl:Slope', ns).text.split()
+	    offset = root.find('.//cdl:SOPNode/cdl:Offset', ns).text.split()
+	    power = root.find('.//cdl:SOPNode/cdl:Power', ns).text.split()
+	    saturation = root.find('.//cdl:SatNode/cdl:Saturation', ns).text.strip()
+	"""
+	try:
         slope = root[0][0][0].text.split()
         offset = root[0][0][1].text.split()
         power = root[0][0][2].text.split()
         saturation = root[0][1][0].text.strip()
+	"""
     except:
         print("Error on:", ccc_path)
         slope = "1.000000 1.000000 1.000000".split()
