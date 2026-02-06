@@ -1,7 +1,7 @@
 # CCC to EDL
 
 **Usage:**
-CCCtoEDL.py [-h] -e EDL -c CCCDIR [-v]
+`CCCtoEDL.py [-h] -e EDL -c CCCDIR [-v]`
 
   **Description:**
 Converts EDL and CCCs to EDL with CDL values.
