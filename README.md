@@ -8,7 +8,7 @@ Converts EDL and CCCs to EDL with CDL values.
 
 ## Arguments:
 
-| Option                             | Description                             | Optional                             |
+| Flags                             | Description                             | Optional                             |
 |------------------------------------|-----------------------------------------|-----------------------------------------|
 | `-h`, `--help`                     | Show this help message and exit        | Optional
 | `-e EDL`, `--edl EDL`              | Input EDL file                         | **Required**
