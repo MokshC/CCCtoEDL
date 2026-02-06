@@ -1,4 +1,7 @@
-# Moksh
+# Moksh Chitkara
+# CCC to EDL command line tool
+# v1.0.0
+# Last updated Feb 5th 2026
 
 import argparse
 import os
@@ -7,34 +10,28 @@ import glob
 import fnmatch
 import xml.etree.ElementTree as ET
 
+verbose = False
+
 def read_ccc_file(ccc_path):
     # Read the Color Correction Collection (CCC) file and extract the values needed
     tree = ET.parse(ccc_path)
     root = tree.getroot()
     
     # Extracting SOP values
-    try:
-        sop_node = root.find('.//SOPNode')
-        slope = sop_node.find('Slope').text.split()
-        offset = sop_node.find('Offset').text.split()
-        power = sop_node.find('Power').text.split()
-        
-        # Extracting Saturation value
-        sat_node = root.find('.//SatNode')
-        saturation = sat_node.find('Saturation').text.strip()
-        
-        return slope, offset, power, saturation
-    except:
-        print("Error on", ccc_path)
-        return None
+    slope = root[0][0][0].text.split()
+    offset = root[0][0][1].text.split()
+    power = root[0][0][2].text.split()
+    
+    # Extracting Saturation value
+    saturation = root[0][1][0].text.strip()
+    
+    return slope, offset, power, saturation
 
 def read_edl_file(edl_path):
     # Read the initial EDL file and return its contents
     with open(edl_path, 'r') as file:
         content = file.readlines()
     return content
-
-
 
 # Function to read the EDL file and extract event numbers and corresponding file names
 def extract_event_mapping(edl_path):
@@ -55,6 +52,7 @@ def extract_event_mapping(edl_path):
 
 # Searches for CCC files in the given directory and returns a dictionary with event numbers and their corresponding paths
 def find_ccc_files(cccDir, edl_path):
+
     # Extract mapping from the EDL
     event_mapping = extract_event_mapping(edl_path)
     pattern = "*.ccc"
@@ -70,22 +68,46 @@ def find_ccc_files(cccDir, edl_path):
             for event_number, event_base_name in event_mapping.items():
                 if event_base_name == base_name:
                     found_paths[event_number] = os.path.join(root, filename)
+                    
+                    if verbose:
+                        print(event_number, found_paths[event_number])
+                    
                     break  # Stop after finding the first match
+    if verbose:
+        print("Found", len(found_paths), "CDL events for EDL")
 
     return found_paths
 
 def write_output_edl(output_path, edl_content, ccc_dict):
+
+    if verbose:
+        print("Begining Write")
+
     # Prepare the output file contents
     output_content = []
+
+    lastfind = False
     for line in edl_content:
+
         if line.startswith('TITLE:'):
             output_content.append(line)
+            lastfind = False
+            
         elif line.startswith('FCM:'):
             output_content.append(line)
-        elif line.strip().isdigit():  # Detecting EDL entries based on line starting with a number
-            entry_number = line.split()[0]
+            lastfind = False
+            
+        elif line[:3].strip().isdigit():  # Detecting EDL entries based on line starting with a number
+            entry_number = line[:3].strip()
+            if verbose:
+                print("Event line found", entry_number)
             ccc_path = ccc_dict.get(entry_number)
+            
             if ccc_path:
+            
+                if verbose:
+                    print("CCC Match at", ccc_path)
+            
                 slope, offset, power, saturation = read_ccc_file(ccc_path)
                 new_line = line
                 new_line += f"*ASC_SOP ({' '.join(map(lambda x: f'{float(x):.6f}', slope))})"
@@ -93,10 +115,22 @@ def write_output_edl(output_path, edl_content, ccc_dict):
                 new_line += f"({ ' '.join(map(lambda x: f'{float(x):.6f}', power))})\n"
                 new_line += f"*ASC_SAT {float(saturation):.6f}\n"
                 output_content.append(new_line)
+
+                
+                if verbose:
+                    print(new_line)
+                lastfind = True
             else:
+                if verbose:
+                    print("No CCC match found")
+                    print(line)
                 output_content.append(line)  # If no match found, just append the original line
+                lastfind = False
+        elif (line[:4].strip() == "*ASC") and lastfind:
+            pass
         else:
             output_content.append(line)  # Append other lines unchanged
+            lastfind = False
 
     # Write to the output EDL file
     with open(output_path, 'w') as file:
@@ -105,23 +139,25 @@ def write_output_edl(output_path, edl_content, ccc_dict):
 def process_edl(edl, cccDict):
     # Example function to process the EDL file and CCC files
     print(f"Processing EDL: {edl}")
-    
     output_file = f"{os.path.splitext(edl)[0]}_cdl.edl"
-    
     write_output_edl(output_file, read_edl_file(edl), cccDict)
-    
     return output_file
 
 def main():
-    parser = argparse.ArgumentParser(description='Converts EDL and CCCs to EDL with CDL values.')
-    parser.add_argument('--edl', type=str, required=True, help='Input EDL file')
-    parser.add_argument('--cccdir', type=str, required=True, help='Directory with CCC files')
+	
+    parser = argparse.ArgumentParser(description="Converts EDL and CCCs to EDL with CDL values.")
+    parser.add_argument('-e', '--edl', type=str, required=True, help='Input EDL file')
+    parser.add_argument('-c', '--cccdir', type=str, required=True, help='Directory with CCC files')
+    parser.add_argument('-v', '--verbose', action='store_true', help='Give verbose logging')
     
     args = parser.parse_args()
+    global verbose
+    verbose = args.verbose
     
     # Expand glob patterns for cccdir and search for cccs
-    print("Searching for CCCs in", str(args.cccdir))
-    ccc_files = find_ccc_files(args.cccdir)
+    if verbose:
+	    print("Searching for CCCs in", str(args.cccdir))
+    ccc_files = find_ccc_files(args.cccdir, args.edl)
     
     if len(ccc_files) < 1:
         print("No CCC files found in the specified directory.")
