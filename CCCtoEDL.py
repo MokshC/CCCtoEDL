@@ -1,6 +1,6 @@
 # CCC to EDL command line tool
-# v1.0.0
-# Last updated Feb 5th 2026
+# v1.0.1
+# Last updated Feb 6th 2026
 # Copyright (C) 2026  Moksh Chitkara
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
@@ -19,23 +19,16 @@ def read_ccc_file(ccc_path):
     tree = ET.parse(ccc_path)
     root = tree.getroot()
 
-	# Extracting SOP values
-	try:
-	    # Define a function to handle namespaces
-	    ns = {'cdl': root.tag.split('{')[1].split('}')[0]}  # Extract namespace
-	
-	    # Find the necessary nodes
-	    slope = root.find('.//cdl:SOPNode/cdl:Slope', ns).text.split()
-	    offset = root.find('.//cdl:SOPNode/cdl:Offset', ns).text.split()
-	    power = root.find('.//cdl:SOPNode/cdl:Power', ns).text.split()
-	    saturation = root.find('.//cdl:SatNode/cdl:Saturation', ns).text.strip()
-	"""
-	try:
-        slope = root[0][0][0].text.split()
-        offset = root[0][0][1].text.split()
-        power = root[0][0][2].text.split()
-        saturation = root[0][1][0].text.strip()
-	"""
+    # Extracting SOP values
+    try:
+        # Define a function to handle namespaces
+        ns = {'cdl': root.tag.split('{')[1].split('}')[0]}  # Extract namespace
+
+        # Find the necessary nodes
+        slope = root.find('.//cdl:SOPNode/cdl:Slope', ns).text.split()
+        offset = root.find('.//cdl:SOPNode/cdl:Offset', ns).text.split()
+        power = root.find('.//cdl:SOPNode/cdl:Power', ns).text.split()
+        saturation = root.find('.//cdl:SatNode/cdl:Saturation', ns).text.strip()
     except:
         print("Error on:", ccc_path)
         slope = "1.000000 1.000000 1.000000".split()
@@ -128,7 +121,8 @@ def write_output_edl(output_path, edl_content, ccc_dict):
             
                 slope, offset, power, saturation = read_ccc_file(ccc_path)
                 new_line = line
-                new_line += f"*ASC_SOP ({' '.join(map(lambda x: f'{float(x):.6f}', slope))})"
+                output_content.append(new_line)
+                new_line = f"*ASC_SOP ({' '.join(map(lambda x: f'{float(x):.6f}', slope))})"
                 new_line += f"({ ' '.join(map(lambda x: f'{float(x):.6f}', offset))})"
                 new_line += f"({ ' '.join(map(lambda x: f'{float(x):.6f}', power))})\n"
                 new_line += f"*ASC_SAT {float(saturation):.6f}\n"
@@ -146,6 +140,8 @@ def write_output_edl(output_path, edl_content, ccc_dict):
                 lastfind = False
         elif (line[:4].strip() == "*ASC") and lastfind:
             pass
+        elif lastfind and (line != "\n"):
+            output_content.insert(-1, line)
         else:
             output_content.append(line)  # Append other lines unchanged
             lastfind = False
