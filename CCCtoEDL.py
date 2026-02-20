@@ -1,6 +1,6 @@
 # CCC to EDL command line tool
-# v1.0.1
-# Last updated Feb 6th 2026
+# v1.1.0
+# Last updated Feb 19th 2026
 # Copyright (C) 2026  Moksh Chitkara
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
@@ -22,7 +22,11 @@ def read_ccc_file(ccc_path):
     # Extracting SOP values
     try:
         # Define a function to handle namespaces
-        ns = {'cdl': root.tag.split('{')[1].split('}')[0]}  # Extract namespace
+        # Extract namespace
+        if '{' in root.tag:
+        	ns = {'cdl': root.tag.split('{')[1].split('}')[0]}
+        else:
+            ns = {'cdl': ''}
 
         # Find the necessary nodes
         slope = root.find('.//cdl:SOPNode/cdl:Slope', ns).text.split()
@@ -30,7 +34,7 @@ def read_ccc_file(ccc_path):
         power = root.find('.//cdl:SOPNode/cdl:Power', ns).text.split()
         saturation = root.find('.//cdl:SatNode/cdl:Saturation', ns).text.strip()
     except:
-        print("Error on:", ccc_path)
+        print("[ERROR] Unable to parse:", ccc_path)
         slope = "1.000000 1.000000 1.000000".split()
         offset = "0.000000 0.000000 0.000000".split()
         power = "1.000000 1.000000 1.000000".split()
@@ -62,11 +66,10 @@ def extract_event_mapping(edl_path):
     return event_mapping
 
 # Searches for CCC files in the given directory and returns a dictionary with event numbers and their corresponding paths
-def find_ccc_files(cccDir, edl_path):
+def find_ccc_files(cccDir, edl_path, pattern):
 
     # Extract mapping from the EDL
     event_mapping = extract_event_mapping(edl_path)
-    pattern = "*.ccc"
     found_paths = {}
 
     # Loop through the specified directory and its subdirectories
@@ -79,11 +82,16 @@ def find_ccc_files(cccDir, edl_path):
             for event_number, event_base_name in event_mapping.items():
                 if event_base_name == base_name:
                     found_paths[event_number] = os.path.join(root, filename)
-                    
                     if verbose:
                         print(event_number, found_paths[event_number])
-                    
                     break  # Stop after finding the first match
+
+                elif loose and ((event_base_name.upper() in base_name.upper()) or (base_name.upper() in event_base_name.upper())):
+                    found_paths[event_number] = os.path.join(root, filename)
+                    if verbose:
+                        print("[WARNING] Loose match:", event_number, found_paths[event_number])
+                    break  # Stop after finding the first match
+
     if verbose:
         print("Found", len(found_paths), "CDL events for EDL")
 
@@ -117,7 +125,7 @@ def write_output_edl(output_path, edl_content, ccc_dict):
             if ccc_path:
             
                 if verbose:
-                    print("CCC Match at", ccc_path)
+                    print("Found match at", ccc_path)
             
                 slope, offset, power, saturation = read_ccc_file(ccc_path)
                 new_line = line
@@ -134,7 +142,7 @@ def write_output_edl(output_path, edl_content, ccc_dict):
                 lastfind = True
             else:
                 if verbose:
-                    print("No CCC match found")
+                    print("[WARNING] No match found")
                     print(line)
                 output_content.append(line)  # If no match found, just append the original line
                 lastfind = False
@@ -163,18 +171,23 @@ def main():
     parser.add_argument('-e', '--edl', type=str, required=True, help='Input EDL file')
     parser.add_argument('-c', '--cccdir', type=str, required=True, help='Directory with CCC files')
     parser.add_argument('-v', '--verbose', action='store_true', help='Give verbose logging')
+    parser.add_argument('-l', '--loose', action='store_true', help='Makes reel and ccc matching looser')
+    parser.add_argument('-p', '--pattern', type=str, default='.ccc', required=False, help='Alternate file extension pattern for finding files, defaults to ".ccc"')
     
     args = parser.parse_args()
     global verbose
+    global loose
     verbose = args.verbose
+    loose = args.loose
+    pattern = "*" + args.pattern
     
     # Expand glob patterns for cccdir and search for cccs
     if verbose:
-	    print("Searching for CCCs in", str(args.cccdir))
-    ccc_files = find_ccc_files(args.cccdir, args.edl)
+	    print("Searching for", pattern, "in", str(args.cccdir))
+    ccc_files = find_ccc_files(args.cccdir, args.edl, pattern)
     
     if len(ccc_files) < 1:
-        print("No CCC files found in the specified directory.")
+        print("[ERROR] No", pattern, "files found in the specified directory.")
         return
     
     output = process_edl(args.edl, ccc_files)
