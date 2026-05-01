@@ -1,6 +1,6 @@
 # CCC to EDL command line tool
-# v1.1.1
-# Last updated Apr 21st 2026
+# v1.1.2
+# Last updated May 1st 2026
 # Copyright (C) 2026  Moksh Chitkara
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
@@ -147,8 +147,8 @@ def write_output_edl(output_path, edl_content, ccc_dict):
 					print(new_line)
 				lastfind = True
 			else:
+				print("[WARNING] No match found", entry_number)
 				if verbose:
-					print("[WARNING] No match found")
 					print(line)
 				output_content.append(line)  # If no match found, just append the original line
 				lastfind = False
